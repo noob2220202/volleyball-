@@ -14,6 +14,16 @@ python3 -m http.server 8000
 # 브라우저에서 http://localhost:8000 접속
 ```
 
+**pm2로 서버에서 계속 켜두기:**
+
+```bash
+npm install -g pm2
+pm2 start ecosystem.config.js   # http://서버IP:8080
+pm2 save && pm2 startup         # 재부팅해도 자동 실행
+```
+
+텔레그램 미니앱은 HTTPS가 필요합니다. 도메인을 연결한 뒤 nginx 등으로 8080 포트를 HTTPS로 프록시하세요.
+
 **GitHub Pages 배포:** 저장소 Settings → Pages에서 배포 브랜치를 고르면 바로 접속 주소가 생깁니다.
 
 ## 모드
