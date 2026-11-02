@@ -81,10 +81,7 @@ const Input = (() => {
   function setLayout(mode) {
     if (!layer) return;
     clearTouch();
-    if (mode === 'dual') {
-      layer.className = 'dual';
-      layer.innerHTML = `<div class="half left">${padHTML(0, 'p1')}</div><div class="half right">${padHTML(1, 'p2')}</div>`;
-    } else if (mode === 'solo') {
+    if (mode === 'solo') {
       layer.className = 'solo';
       layer.innerHTML = padHTML(0, 'p1');
     } else {
@@ -98,7 +95,6 @@ const Input = (() => {
     setupTouch, setLayout,
     // 혼자 조종 : 모든 키 + 터치
     solo() { return or(or(fromKeys(0, SOLO_EXTRA), fromKeys(1)), touch[0]); },
-    player(i) { return or(fromKeys(i), touch[i]); },
     pressed(code) { return keys.has(code); },
   };
 })();

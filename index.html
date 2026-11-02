@@ -35,10 +35,7 @@
           <button data-act="host">방 만들기</button>
           <button data-act="join">방 참가</button>
         </div>
-        <div class="row small">
-          <button data-act="cpu">연습 <small>vs CPU</small></button>
-          <button data-act="local">한 기기 2인</button>
-        </div>
+        <button data-act="cpu" class="small">연습하기 <small>vs CPU</small></button>
         <div class="row small">
           <button data-go="p-settings">설정</button>
           <button data-go="p-howto">조작법</button>
@@ -49,11 +46,11 @@
     <!-- 온라인: 방 만들기 -->
     <section class="panel" id="p-host">
       <h2>온라인 방 만들기</h2>
-      <p>친구에게 아래 코드를 알려주세요</p>
+      <p>친구에게 초대 링크나 코드를 보내주세요</p>
       <div class="code" id="hostCode">····</div>
       <div class="row">
         <button id="btnCopy">링크 복사</button>
-        <button id="btnShare">공유하기</button>
+        <button id="btnShare">친구 초대</button>
       </div>
       <p class="status" id="hostStatus">서버에 연결 중...</p>
       <button data-act="cancelNet" class="ghost">취소</button>
@@ -94,13 +91,13 @@
     <section class="panel wide" id="p-howto">
       <h2>조작법</h2>
       <table>
-        <tr><th></th><th>모찌 (왼쪽 / 1P)</th><th>펭구 (오른쪽 / 2P)</th></tr>
-        <tr><td>이동</td><td>A · D</td><td>← · →</td></tr>
-        <tr><td>점프</td><td>W</td><td>↑</td></tr>
-        <tr><td>스파이크</td><td>F (또는 G, Z)</td><td>Enter</td></tr>
+        <tr><th></th><th>PC 키보드</th><th>모바일</th></tr>
+        <tr><td>이동</td><td>A · D 또는 ← · →</td><td>◀ ▶</td></tr>
+        <tr><td>점프</td><td>W 또는 ↑</td><td>점프</td></tr>
+        <tr><td>스파이크</td><td>Space · F · Enter</td><td>스파이크</td></tr>
       </table>
       <ul>
-        <li>혼자 하기·온라인에서는 두 키 세트 모두 + <b>Space</b>(스파이크) 사용 가능</li>
+        <li>온라인 대전에서 방장은 모찌(왼쪽), 참가자는 펭구(오른쪽)</li>
         <li><b>점프 중 스파이크</b> → 강타! 방향키를 함께 누르면 방향이 바뀌어요<br><small>↑ 높게 · ↓ 내리꽂기 · 네트 쪽 빠르게 · 뒤쪽 짧게</small></li>
         <li><b>땅에서 이동 + 스파이크</b> → 다이빙 리시브</li>
         <li>공이 내 코트 바닥에 닿으면 상대 득점. 득점한 쪽이 서브!</li>
@@ -142,6 +139,7 @@
 <div id="touch"></div>
 <div id="rotate">가로로 돌리면 더 크게 즐길 수 있어요 ↻</div>
 
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="js/game.js"></script>
 <script src="js/ai.js"></script>
@@ -150,6 +148,7 @@
 <script src="js/audio.js"></script>
 <script src="js/input.js"></script>
 <script src="js/net.js"></script>
+<script src="js/tg.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

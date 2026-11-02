@@ -23,7 +23,10 @@
   const online = { meReady: false, themReady: false, rin: { l: 0, r: 0, u: 0, d: 0, a: 0 }, rac: 0, ruc: 0, cac: 0, cuc: 0, ac: 0, uc: 0, prev: { a: 0, u: 0 }, ping: 0, lastSeen: 0, seq: 0, rseq: 0, ack: 0, hist: [] };
 
   // ---------- 화면 ----------
+  let curPanel = null;
   function show(id) {
+    curPanel = id;
+    TG.backButton(!(id === 'p-menu'));
     $$('.panel').forEach(p => p.classList.toggle('on', p.id === id));
     $('#overlay').classList.toggle('on', !!id);
     $('#overlay').classList.toggle('dim', !!id && mode !== 'demo');
@@ -36,15 +39,18 @@
     const ingame = mode !== 'demo' && !paused && !$('#overlay').classList.contains('on');
     document.body.classList.toggle('touchui', isTouch());
     if (!isTouch() || mode === 'demo') Input.setLayout(null);
-    else Input.setLayout(mode === 'local' ? 'dual' : 'solo');
+    else Input.setLayout('solo');
     document.body.classList.toggle('ingame', mode !== 'demo');
-    $('#btnPause').style.display = (mode === 'cpu' || mode === 'local') ? '' : 'none';
+    $('#btnPause').style.display = mode === 'cpu' ? '' : 'none';
     resize();
     return ingame;
   }
 
   function resize() {
-    const vw = window.innerWidth, vh = window.innerHeight;
+    const ins = TG.insets();
+    document.body.style.padding = `${ins.top}px ${ins.right}px ${ins.bottom}px ${ins.left}px`;
+    document.documentElement.style.setProperty('--sb', ins.bottom + 'px');
+    const vw = window.innerWidth - ins.left - ins.right, vh = window.innerHeight - ins.top - ins.bottom;
     const portrait = vh > vw;
     const touch = isTouch() && mode !== 'demo';
     let s = Math.min(vw / C.W, vh / C.H);
@@ -58,6 +64,7 @@
     document.documentElement.style.setProperty('--ps', ps.toFixed(3));
   }
   window.addEventListener('resize', resize);
+  TG.onViewport(resize);
   window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
   // ---------- 게임 시작/종료 ----------
@@ -72,8 +79,10 @@
     }
     if (m !== 'guest') game = newGame(S.win);
     online.seq = online.ack = online.rseq = 0; online.hist = [];
+    TG.confirmClose(m === 'host' || m === 'guest');
     online.meReady = online.themReady = false;
     show(null);
+    TG.backButton(true);
     layoutTouch();
     Sound.startBgm();
   }
@@ -84,6 +93,8 @@
     game = newGame(99); brains = [new CpuBrain(0, 1), new CpuBrain(1, 1)];
     Render.clearFx();
     Sound.stopBgm();
+    TG.confirmClose(false);
+    online.rname = '';
     $('#ping').textContent = '';
     show('p-menu');
     layoutTouch();
@@ -91,7 +102,7 @@
   }
 
   function setPause(v) {
-    if (mode !== 'cpu' && mode !== 'local') return;
+    if (mode !== 'cpu') return;
     if (game.phase === 'over') return;
     paused = v;
     if (v) { show('p-pause'); Sound.stopBgm(); } else { show(null); Sound.startBgm(); }
@@ -101,17 +112,21 @@
   function labels() {
     switch (mode) {
       case 'cpu': return humanSide === 0 ? ['YOU', 'CPU'] : ['CPU', 'YOU'];
-      case 'local': return ['1P', '2P'];
       case 'host': return ['YOU', 'RIVAL'];
       case 'guest': return ['RIVAL', 'YOU'];
     }
     return null;
   }
 
+  function mySide() { return mode === 'cpu' ? humanSide : mode === 'guest' ? 1 : 0; }
   function handleEvents(evs, sound) {
     for (const e of evs) {
       Render.fx(e);
-      if (sound) Sound.play(e.k);
+      if (!sound) continue;
+      Sound.play(e.k);
+      if (e.k === 'spike' && e.s === mySide()) TG.haptic('heavy');
+      else if (e.k === 'bump' && e.s === mySide()) TG.haptic('light');
+      else if (e.k === 'point') TG.haptic(e.s === mySide() ? 'success' : 'error');
     }
   }
 
@@ -122,8 +137,10 @@
       const w = game.winner;
       let title = `${CHAR_NAMES_KO[w]} 승리!`;
       if (mode === 'cpu') title = w === humanSide ? '승리! 🎉' : '아쉬워요... 패배';
-      if (mode === 'host') title = w === 0 ? '승리! 🎉' : '패배...';
-      if (mode === 'guest') title = w === 1 ? '승리! 🎉' : '패배...';
+      if (mode === 'host' || mode === 'guest') {
+        title = w === mySide() ? '승리! 🎉' : '패배...';
+        if (online.rname) title += ` (vs ${online.rname})`;
+      }
       $('#overTitle').textContent = title;
       $('#overScore').textContent = `모찌 ${game.score[0]} : ${game.score[1]} 펭구`;
       $('#overStatus').textContent = '';
@@ -146,6 +163,7 @@
       },
       onOpen() {
         online.lastSeen = performance.now();
+        Net.send({ t: 'hello', name: (TG.name() || '').slice(0, 20) });
         if (host()) {
           startGame('host');
           Net.send({ t: 'start' });
@@ -180,6 +198,7 @@
             $('#overStatus').textContent = online.meReady ? '' : '상대가 한 판 더 원해요!';
             if (host() && online.meReady) restartOnline();
             break;
+          case 'hello': online.rname = String(m.name || '').slice(0, 20); break;
           case 'ping': Net.send({ t: 'pong', ts: m.ts }); break;
           case 'pong': online.ping = Math.round(performance.now() - m.ts); break;
           case 'full':
@@ -239,7 +258,7 @@
     return Object.assign({}, game, { players: [game.players[0], p] });
   }
 
-  function roomLink(code) { return location.origin + location.pathname + '?room=' + code; }
+  function roomLink(code) { return TG.inviteLink(code); }
 
   // ---------- 루프 ----------
   let pingTimer = 0;
@@ -253,7 +272,7 @@
         inputs = [];
         inputs[humanSide] = Input.solo();
         inputs[1 - humanSide] = brains[1 - humanSide].input(game);
-      } else if (mode === 'local') inputs = [Input.player(0), Input.player(1)];
+      }
       else if (mode === 'host') inputs = [Input.solo(), hostRemoteInput()];
       stepGame(game, inputs);
       handleEvents(game.ev, mode !== 'demo');
@@ -270,7 +289,7 @@
       }
       if (++pingTimer % 120 === 0) {
         Net.send({ t: 'ping', ts: performance.now() });
-        $('#ping').textContent = online.ping ? `PING ${online.ping}ms` : '';
+        $('#ping').textContent = (online.rname ? `vs ${online.rname} · ` : '') + (online.ping ? `PING ${online.ping}ms` : '');
       }
     }
     Render.update(game);
@@ -299,7 +318,6 @@
     Sound.play('ok');
     switch (act) {
       case 'cpu': startGame('cpu'); break;
-      case 'local': startGame('local'); break;
       case 'host':
         $('#hostCode').textContent = '····';
         $('#hostStatus').textContent = '서버에 연결 중...';
@@ -354,6 +372,7 @@
   $('#btnShare').addEventListener('click', async () => {
     if (!Net.code) return;
     const link = roomLink(Net.code);
+    if (TG.share(link, `말랑배구 한 판 하자! 방 코드: ${Net.code}`)) return;
     if (navigator.share) { try { await navigator.share({ title: '말랑배구 한 판!', text: `방 코드: ${Net.code}`, url: link }); } catch (_) {} }
     else { try { await navigator.clipboard.writeText(link); $('#hostStatus').textContent = '링크를 복사했어요!'; } catch (_) { prompt('링크', link); } }
   });
@@ -385,6 +404,7 @@
   $('#btnSound').classList.toggle('off', !(S.sfx || S.bgm));
   $('#btnFull').addEventListener('click', e => {
     e.stopPropagation();
+    if (TG.toggleFullscreen()) return;
     const d = document, el = d.documentElement;
     if (!d.fullscreenElement && !d.webkitFullscreenElement) {
       const r = el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen && el.webkitRequestFullscreen();
@@ -396,11 +416,11 @@
 
   window.addEventListener('keydown', e => {
     if (e.code === 'Escape' || e.code === 'KeyP') {
-      if (mode === 'cpu' || mode === 'local') setPause(!paused);
+      if (mode === 'cpu') setPause(!paused);
     }
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && (mode === 'cpu' || mode === 'local') && !paused) setPause(true);
+    if (document.hidden && mode === 'cpu' && !paused) setPause(true);
   });
 
   // 터치 & 기타
@@ -417,12 +437,21 @@
     Render.drawCreature(lc, 'peng', 70, 38, -1, 1, 1, o);
   })();
 
+  TG.init();
+  TG.onBack(() => {
+    if (mode === 'cpu') { if (!paused && game.phase !== 'over') setPause(true); else toMenu(); return; }
+    if (mode === 'host' || mode === 'guest') { if (confirm('대전을 그만두고 나갈까요?')) toMenu(); return; }
+    if (curPanel === 'p-host' || curPanel === 'p-join' || curPanel === 'p-quick') Net.close();
+    show('p-menu');
+  });
+
   syncSettings();
   show('p-menu');
   layoutTouch();
 
   // ?room=CODE 로 들어오면 바로 참가
-  const room = new URLSearchParams(location.search).get('room');
+  const sp = TG.startParam();
+  const room = /^[A-Za-z0-9]{4}$/.test(sp) ? sp : new URLSearchParams(location.search).get('room');
   if (room) {
     show('p-join');
     $('#joinCode').value = room.toUpperCase().slice(0, 4);

@@ -97,7 +97,7 @@ small { font-size: 9px; opacity: .75; }
 .panel button.hot { background: var(--accent); color: #fff; font-size: 15px; padding: 9px 12px; text-shadow: 1px 1px 0 var(--ink); }
 .panel button.hot:hover { background: #ff8aa3; }
 .panel button.hot small { opacity: .95; }
-.row.small button { font-size: 11px; padding: 5px 8px; background: #eef6ff; }
+.row.small button, .panel button.small { font-size: 11px; padding: 5px 8px; background: #eef6ff; }
 .panel button.ghost { background: transparent; box-shadow: none; border-style: dashed; font-size: 11px; padding: 4px 12px; margin-top: 4px; }
 
 .code {
@@ -131,8 +131,8 @@ ul { text-align: left; font-size: 11px; margin: 4px 0; padding-left: 18px; line-
 
 /* ---------- 터치 컨트롤 ---------- */
 #touch { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; pointer-events: none;
-  padding: 0 max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
-#touch.solo, #touch.dual { display: flex; justify-content: space-between; align-items: flex-end; }
+  padding: 0 max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom), calc(var(--sb, 0px) + 10px)) max(10px, env(safe-area-inset-left)); }
+#touch.solo { display: flex; justify-content: space-between; align-items: flex-end; }
 #touch .half { display: flex; flex-direction: column; gap: 6px; align-items: center; }
 #touch .pad { display: flex; gap: 8px; pointer-events: auto; touch-action: none; }
 #touch button {
@@ -147,21 +147,12 @@ ul { text-align: left; font-size: 11px; margin: 4px 0; padding-left: 18px; line-
 #touch button.jump { background: rgba(79, 184, 255, .45); }
 #touch button.spike { background: rgba(255, 107, 138, .5); margin-bottom: 26px; }
 #touch button.on { transform: scale(.92); background: rgba(255, 230, 80, .7); }
-#touch.dual button { width: 46px; height: 46px; font-size: 16px; }
-#touch.dual button.big { width: 56px; height: 56px; font-size: 11px; }
-#touch.dual button.spike { margin-bottom: 0; }
-#touch.dual .half.right { flex-direction: column; }
-#touch.dual .p2 button { border-color: rgba(20, 26, 60, .8); }
-#touch.dual .p1 button { border-color: rgba(90, 46, 14, .8); }
 
 /* 세로 화면 + 터치: 게임은 위, 버튼은 아래쪽 넓게 */
 body.portrait #touch.solo { bottom: 5vh; }
 body.portrait #touch.solo .pad { gap: 2vw; }
 body.portrait #touch.solo button { width: min(68px, 15vw); height: min(68px, 15vw); }
 body.portrait #touch.solo button.big { width: min(86px, 19vw); height: min(86px, 19vw); font-size: 13px; }
-body.portrait #touch.dual button { width: min(46px, 10vw); height: min(46px, 10vw); }
-body.portrait #touch.dual button.big { width: min(56px, 12vw); height: min(56px, 12vw); font-size: 10px; }
-body.portrait #touch.dual .pad { gap: 4px; }
 
 #rotate { display: none; }
 body.touchui.portrait.ingame #rotate {
