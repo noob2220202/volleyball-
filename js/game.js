@@ -247,3 +247,28 @@ function unpackGame(o, g) {
   g.server = o.v; g.winner = o.w; g.win = o.W; g.ev = o.e || [];
   return g;
 }
+
+// 버튼 입력을 한 번도 빠짐없이 처리 (따닥 연타도 두 번으로 인식되게 눌림/뗌을 번갈아 적용)
+// raw: {l,r,u,d,a} 현재 눌림 상태, counts: {u,a} 지금까지 누른 횟수
+function makeEdge() {
+  const st = { c: { u: null, a: null }, last: { u: 0, a: 0 } };
+  return (raw, counts) => {
+    const i = Object.assign({}, raw);
+    for (const k of ['u', 'a']) {
+      if (st.c[k] === null || counts[k] - st.c[k] > 3 || counts[k] < st.c[k]) st.c[k] = counts[k] - (counts[k] > st.c[k] && st.c[k] !== null ? 1 : 0);
+      if (counts[k] !== st.c[k]) {
+        if (st.last[k]) i[k] = 0; else { i[k] = 1; st.c[k]++; }
+      }
+      st.last[k] = i[k];
+    }
+    return i;
+  };
+}
+
+const bitsToInput = b => ({ l: b & 1, r: (b >> 1) & 1, u: (b >> 2) & 1, d: (b >> 3) & 1, a: (b >> 4) & 1 });
+const inputToBits = i => (i.l ? 1 : 0) | (i.r ? 2 : 0) | (i.u ? 4 : 0) | (i.d ? 8 : 0) | (i.a ? 16 : 0);
+
+// 서버(Node.js)에서도 같은 게임 로직을 사용
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { C, WIN_SCORE, newGame, stepGame, packGame, unpackGame, makeEdge, bitsToInput, inputToBits, isGameOver };
+}

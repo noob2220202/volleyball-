@@ -1,14 +1,12 @@
 // pm2 설정 : pm2 start ecosystem.config.js
-// pm2 에 내장된 정적 파일 서버(serve)로 이 폴더를 띄웁니다.
+// 게임 서버(게임 파일 + 온라인 대전)를 실행합니다.
 module.exports = {
   apps: [
     {
       name: 'mallang-volley',
-      script: 'serve',
-      env: {
-        PM2_SERVE_PATH: __dirname,
-        PM2_SERVE_PORT: 8080,
-      },
+      script: 'server/server.js',
+      cwd: __dirname,
+      env: { PORT: 8080 },
     },
   ],
 };

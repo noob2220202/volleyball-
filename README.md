@@ -5,36 +5,47 @@ PC와 모바일에서 모두 돌아가고, **온라인 대전**을 중심으로 
 
 > 캐릭터, 배경, 공, 폰트, 효과음, 배경음악은 모두 코드로 직접 그리고 합성한 오리지널 리소스입니다.
 
-## 실행
+## 서버에 설치하기
 
-빌드 과정이 없는 정적 웹페이지입니다.
-
-```bash
-python3 -m http.server 8000
-# 브라우저에서 http://localhost:8000 접속
-```
-
-**pm2로 서버에서 계속 켜두기:**
+게임 서버(Node.js) 하나가 게임 파일과 온라인 대전을 모두 맡습니다.
 
 ```bash
+# 1) Node.js 18 이상, pm2 준비
 npm install -g pm2
-pm2 start ecosystem.config.js   # http://서버IP:8080
-pm2 save && pm2 startup         # 재부팅해도 자동 실행
+
+# 2) 코드 받기
+git clone -b ccr-941d6b48-cbo5pn https://github.com/noob2220202/volleyball-.git
+cd volleyball-
+
+# 3) 필요한 패키지 설치
+npm install
+
+# 4) 실행 (8080 포트)
+pm2 start ecosystem.config.js
+pm2 save && pm2 startup     # 재부팅해도 자동 실행 (startup 이 알려주는 명령을 한 번 실행)
 ```
 
-텔레그램 미니앱은 HTTPS가 필요합니다.
+- 상태 확인: `curl http://localhost:8080/health` → 진행 중인 방 수, 접속자 수
+- 업데이트: `git pull && npm install && pm2 restart mallang-volley`
 
-**Caddy로 HTTPS 자동 적용 (추천):** `Caddyfile.example`을 참고하세요. 도메인만 바꿔서 `/etc/caddy/Caddyfile`에 넣으면 인증서까지 자동으로 붙습니다.
-- Caddy가 파일을 직접 서비스하면 pm2 없이도 됩니다.
-- pm2로 띄웠다면 `reverse_proxy 127.0.0.1:8080`으로 연결하면 됩니다.
+**HTTPS (텔레그램 필수):** Caddy를 쓰면 됩니다. `Caddyfile.example`을 참고해서 도메인만 바꿔 `/etc/caddy/Caddyfile`에 넣으세요. Caddy가 인증서를 자동으로 받고, 웹소켓도 알아서 연결해 줍니다.
 
-**GitHub Pages 배포:** 저장소 Settings → Pages에서 배포 브랜치를 고르면 바로 접속 주소가 생깁니다.
+```
+game.내도메인.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+그다음 BotFather의 미니앱 주소를 `https://game.내도메인.com` 으로 설정하면 됩니다.
+
+> 게임 페이지를 GitHub Pages 같은 다른 곳에 올린다면 `js/net.js` 맨 위 `GAME_SERVER`에 `wss://game.내도메인.com/ws`를 넣어야 온라인 대전이 됩니다. 서버 하나에서 다 띄우면 설정할 필요가 없습니다.
 
 ## 모드
 
 | 모드 | 설명 |
 |---|---|
-| **빠른 대전** | 서버 없이 온라인 랜덤 매칭. 먼저 들어온 사람이 대기하고, 다음 사람이 자동으로 연결됩니다. |
+| **빠른 대전** | 온라인 랜덤 매칭. 먼저 들어온 사람이 대기하고, 다음 사람이 자동으로 연결됩니다. |
 | **방 만들기 / 방 참가** | 4자리 방 코드나 링크(`?room=CODE`)를 공유해서 친구와 대전합니다. |
 | 연습 (vs CPU) | 난이도 3단계 |
 
@@ -86,10 +97,11 @@ pm2 save && pm2 startup         # 재부팅해도 자동 실행
 
 ## 온라인 구조
 
-- PeerJS(WebRTC)로 브라우저끼리 직접(P2P) 연결합니다. 별도 게임 서버가 필요 없습니다.
-- 방장이 60fps로 물리를 계산해 상태를 보내고, 참가자는 입력만 보냅니다(호스트 권한 방식). 그래서 두 화면이 어긋나지 않습니다.
-- 참가자 화면은 내 캐릭터에 클라이언트 예측을 적용해서 핑이 있어도 즉시 반응합니다.
-- 핑 표시, 재경기(양쪽 동의), 끊김 감지(7초 무응답)를 지원합니다.
+- 두 사람이 모두 **게임 서버에 웹소켓으로 접속**합니다. 사용자끼리 직접 연결하지 않아서 통신사 망이나 와이파이 종류와 상관없이 연결됩니다.
+- **서버가 60fps로 게임을 직접 계산**하고 결과를 두 사람에게 보냅니다. 두 화면이 어긋나지 않고, 누가 방장이든 유리하지 않습니다.
+- 내 캐릭터는 클라이언트 예측을 적용해서, 핑이 있어도 버튼을 누르면 바로 반응합니다.
+- 서버가 빠른 대전 매칭, 4자리 방 코드, 재경기(양쪽 동의), 상대 이탈 알림을 처리합니다.
+- 핑 표시를 지원하고, 7초 동안 응답이 없으면 끊김으로 처리합니다.
 
 ## 파일
 
@@ -102,7 +114,10 @@ js/render.js    픽셀아트 렌더링, 이펙트
 js/font.js      3x5 비트맵 폰트
 js/audio.js     칩튠 효과음·BGM (WebAudio)
 js/input.js     키보드·멀티터치
-js/net.js       온라인 (PeerJS)
+js/net.js       온라인 (게임 서버 웹소켓 연결, GAME_SERVER 설정)
 js/tg.js        텔레그램 미니앱 연동 (TG_APP_URL 설정)
 js/main.js      게임 루프, 화면 전환, 온라인 동기화
+server/server.js  게임 서버 (파일 서비스 + 매칭 + 게임 계산)
+ecosystem.config.js  pm2 설정
+Caddyfile.example    Caddy(HTTPS) 설정 예시
 ```

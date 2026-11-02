@@ -20,7 +20,7 @@
   let brains = [new CpuBrain(0, 1), new CpuBrain(1, 1)];
   let paused = false, overShown = false;
   let humanSide = 0;
-  const online = { meReady: false, themReady: false, rin: { l: 0, r: 0, u: 0, d: 0, a: 0 }, rac: 0, ruc: 0, cac: 0, cuc: 0, ac: 0, uc: 0, prev: { a: 0, u: 0 }, ping: 0, lastSeen: 0, seq: 0, rseq: 0, ack: 0, hist: [] };
+  const online = { side: 0, rname: '', ping: 0, lastSeen: 0, seq: 0, ack: 0, hist: [] };
 
   // ---------- 화면 ----------
   let curPanel = null;
@@ -91,12 +91,11 @@
       brains = [null, null];
       brains[1 - humanSide] = new CpuBrain(1 - humanSide, S.level);
     }
-    if (m !== 'guest') game = newGame(WIN_SCORE);
-    online.seq = online.ack = online.rseq = 0; online.hist = [];
-    online.rac = online.ruc = 0;
-    localEdge = makeEdge(); remoteEdge = makeEdge();
-    TG.confirmClose(m === 'host' || m === 'guest');
-    online.meReady = online.themReady = false;
+    game = newGame(WIN_SCORE);
+    online.seq = online.ack = 0; online.hist = [];
+    online.lastSeen = performance.now();
+    localEdge = makeEdge();
+    TG.confirmClose(m === 'online');
     show(null);
     TG.backButton(true);
     layoutTouch();
@@ -104,7 +103,7 @@
   }
 
   function toMenu() {
-    if (mode === 'host' || mode === 'guest') Net.close();
+    if (mode === 'online') Net.close();
     mode = 'demo'; paused = false;
     game = newGame(99); brains = [new CpuBrain(0, 1), new CpuBrain(1, 1)];
     Render.clearFx();
@@ -128,13 +127,12 @@
   function labels() {
     switch (mode) {
       case 'cpu': return humanSide === 0 ? ['YOU', 'CPU'] : ['CPU', 'YOU'];
-      case 'host': return ['YOU', 'RIVAL'];
-      case 'guest': return ['RIVAL', 'YOU'];
+      case 'online': return online.side === 0 ? ['YOU', 'RIVAL'] : ['RIVAL', 'YOU'];
     }
     return null;
   }
 
-  function mySide() { return mode === 'cpu' ? humanSide : mode === 'guest' ? 1 : 0; }
+  function mySide() { return mode === 'cpu' ? humanSide : mode === 'online' ? online.side : 0; }
   function handleEvents(evs, sound) {
     for (const e of evs) {
       Render.fx(e);
@@ -153,7 +151,7 @@
       const w = game.winner;
       let title = `${CHAR_NAMES_KO[w]} 승리!`;
       if (mode === 'cpu') title = w === humanSide ? '승리! 🎉' : '아쉬워요... 패배';
-      if (mode === 'host' || mode === 'guest') {
+      if (mode === 'online') {
         title = w === mySide() ? '승리! 🎉' : '패배...';
         if (online.rname) title += ` (vs ${online.rname})`;
       }
@@ -166,66 +164,45 @@
     }
   }
 
-  // ---------- 온라인 ----------
+  // ---------- 온라인 (게임 서버가 계산, 나는 입력만 보내고 화면을 그림) ----------
   function netHandlers() {
-    const host = () => Net.role === 'host';
     return {
-      onWaiting() {
-        $('#quickStatus').textContent = '상대를 찾는 중... 다른 사람이 들어오면 바로 시작해요';
-      },
+      onWaiting() { $('#quickStatus').textContent = '상대를 찾는 중... 다른 사람이 들어오면 바로 시작해요'; },
       onCode(code) {
         $('#hostCode').textContent = code;
         $('#hostStatus').textContent = '상대를 기다리는 중...';
       },
-      onOpen() {
-        online.lastSeen = performance.now();
-        Net.send({ t: 'hello', name: (TG.name() || '').slice(0, 20) });
-        if (host()) {
-          startGame('host');
-          Net.send({ t: 'start' });
-        } else {
-          $('#joinStatus').textContent = '연결됨! 곧 시작해요';
-          $('#quickStatus').textContent = '상대를 찾았어요! 곧 시작해요';
-        }
+      onStart(m) {
+        online.side = m.side;
+        online.rname = String(m.rname || '').slice(0, 20);
+        $('#quickStatus').textContent = $('#joinStatus').textContent = '상대를 찾았어요!';
+        startGame('online');
       },
       onData(m) {
         online.lastSeen = performance.now();
-        if (!m || typeof m !== 'object') return;
         switch (m.t) {
-          case 'i': // 참가자 입력
-            if (mode !== 'host') return;
-            online.rin = { l: m.b & 1, r: (m.b >> 1) & 1, u: (m.b >> 2) & 1, d: (m.b >> 3) & 1, a: (m.b >> 4) & 1 };
-            online.rac = m.a; online.ruc = m.u; online.rseq = m.s || 0;
-            break;
-          case 's': // 게임 상태
-            if (mode !== 'guest') return;
+          case 's':
+            if (mode !== 'online') return;
             game = unpackGame(m.g, game);
             online.ack = m.g.q || 0;
             handleEvents(game.ev, true);
             checkOver();
             break;
-          case 'start':
-            if (host()) return;
-            if (mode !== 'guest') startGame('guest');
-            else { overShown = false; online.meReady = online.themReady = false; Render.clearFx(); show(null); layoutTouch(); }
-            break;
           case 'rematch':
-            online.themReady = true;
-            $('#overStatus').textContent = online.meReady ? '' : '상대가 한 판 더 원해요!';
-            if (host() && online.meReady) restartOnline();
+            $('#overStatus').textContent = $('#btnAgain').disabled ? '' : '상대가 한 판 더 원해요!';
             break;
-          case 'hello': online.rname = String(m.name || '').slice(0, 20); break;
-          case 'ping': Net.send({ t: 'pong', ts: m.ts }); break;
+          case 'left':
+            if (mode === 'online') { mode = 'demo'; Net.close(); Sound.stopBgm(); TG.confirmClose(false); layoutTouch(); notice('상대가 나갔어요', '상대가 대전을 떠났어요.'); }
+            break;
           case 'pong': online.ping = Math.round(performance.now() - m.ts); break;
-          case 'full':
-            Net.close(); notice('입장 불가', '이미 대전 중인 방이에요.'); break;
         }
       },
-      onClose() {
-        if (mode === 'host' || mode === 'guest') { mode = 'demo'; notice('연결 끊김', '상대와의 연결이 끊어졌어요.'); Sound.stopBgm(); layoutTouch(); }
+      onClose(wasInGame) {
+        if (mode === 'online') { mode = 'demo'; Sound.stopBgm(); TG.confirmClose(false); layoutTouch(); notice('연결 끊김', '게임 서버와 연결이 끊어졌어요.'); }
+        else if (!wasInGame) { $('#hostStatus').textContent = $('#joinStatus').textContent = $('#quickStatus').textContent = '서버와 연결이 끊어졌어요.'; $('#btnJoin').disabled = false; }
       },
       onError(msg) {
-        if (mode === 'host' || mode === 'guest') { Net.close(); mode = 'demo'; notice('연결 오류', msg); layoutTouch(); return; }
+        if (mode === 'online') { Net.close(); mode = 'demo'; notice('연결 오류', msg); layoutTouch(); return; }
         $('#hostStatus').textContent = msg;
         $('#joinStatus').textContent = msg;
         $('#quickStatus').textContent = msg;
@@ -233,48 +210,25 @@
       },
     };
   }
+  const myName = () => (TG.name() || '').slice(0, 20);
 
-  function restartOnline() {
-    game = newGame(WIN_SCORE);
-    overShown = false; online.meReady = online.themReady = false;
-    Render.clearFx(); show(null); layoutTouch();
-    Net.send({ t: 'start' });
-  }
-
-  // 버튼 입력을 한 번도 빠짐없이 처리 (따닥 연타도 두 번으로 인식되게 눌림/뗌을 번갈아 적용)
-  function makeEdge() {
-    const st = { c: { u: null, a: null }, last: { u: 0, a: 0 } };
-    return (raw, counts) => {
-      const i = Object.assign({}, raw);
-      for (const k of ['u', 'a']) {
-        if (st.c[k] === null || counts[k] - st.c[k] > 3 || counts[k] < st.c[k]) st.c[k] = counts[k] - (counts[k] > st.c[k] && st.c[k] !== null ? 1 : 0);
-        if (counts[k] !== st.c[k]) {
-          if (st.last[k]) i[k] = 0; else { i[k] = 1; st.c[k]++; }
-        }
-        st.last[k] = i[k];
-      }
-      return i;
-    };
-  }
-  let localEdge = makeEdge(), remoteEdge = makeEdge();
+  let localEdge = makeEdge();
   function localInput() { return localEdge(Input.solo(), Input.counts()); }
-  function hostRemoteInput() { return remoteEdge(online.rin, { u: online.ruc, a: online.rac }); }
 
-  function guestSendInput() {
+  function sendInput() {
+    const raw = Input.solo(), c = Input.counts();
     const i = localInput();
-    const c = Input.counts();
-    online.ac = c.a; online.uc = c.u;
-    const b = i.l | (i.r << 1) | (i.u << 2) | (i.d << 3) | (i.a << 4);
     online.seq++;
     online.hist.push({ s: online.seq, i });
     if (online.hist.length > 120) online.hist.shift();
-    Net.send({ t: 'i', b, a: online.ac, u: online.uc, s: online.seq });
+    Net.send({ t: 'i', b: inputToBits(raw), a: c.a, u: c.u, s: online.seq });
   }
 
-  // 참가자 화면: 내 캐릭터는 아직 방장이 처리하지 않은 입력을 미리 적용해서 바로 반응하게(클라이언트 예측)
-  function guestView() {
+  // 내 캐릭터는 서버가 아직 처리하지 않은 입력을 미리 적용해서 바로 반응하게 (클라이언트 예측)
+  function onlineView() {
     if (game.phase === 'over') return game;
-    const p = Object.assign({}, game.players[1]);
+    const me = online.side;
+    const p = Object.assign({}, game.players[me]);
     const stub = { phase: game.phase, ev: [], frame: game.frame, t: game.t, ball: game.ball };
     const h = online.hist;
     let start = h.findIndex(e => e.s > online.ack);
@@ -282,7 +236,8 @@
     if (h.length - start > 40) start = h.length - 40;
     if (start > 0) { p.pu = h[start - 1].i.u; p.pa = h[start - 1].i.a; }
     for (let k = start; k < h.length; k++) updatePlayer(stub, p, h[k].i);
-    return Object.assign({}, game, { players: [game.players[0], p] });
+    const players = game.players.slice(); players[me] = p;
+    return Object.assign({}, game, { players });
   }
 
   function roomLink(code) { return TG.inviteLink(code); }
@@ -290,8 +245,8 @@
   // ---------- 루프 ----------
   let pingTimer = 0;
   function tick() {
-    if (mode === 'guest') {
-      guestSendInput();
+    if (mode === 'online') {
+      sendInput();
     } else if (!paused) {
       let inputs;
       if (mode === 'demo') inputs = [brains[0].input(game), brains[1].input(game)];
@@ -300,15 +255,13 @@
         inputs[humanSide] = localInput();
         inputs[1 - humanSide] = brains[1 - humanSide].input(game);
       }
-      else if (mode === 'host') inputs = [localInput(), hostRemoteInput()];
       stepGame(game, inputs);
       handleEvents(game.ev, mode !== 'demo');
-      if (mode === 'host') { const g = packGame(game); g.q = online.rseq; Net.send({ t: 's', g }); }
       if (mode === 'demo' && game.phase === 'over' && game.t > 180) game = newGame(99);
       if (mode === 'demo' && (game.score[0] > 8 || game.score[1] > 8)) game.score = [0, 0];
       checkOver();
     }
-    if (mode === 'host' || mode === 'guest') {
+    if (mode === 'online') {
       if (performance.now() - online.lastSeen > 7000) {
         Net.close(); mode = 'demo'; Sound.stopBgm(); layoutTouch();
         notice('연결 끊김', '상대의 응답이 없어요. 연결이 끊어졌어요.');
@@ -329,7 +282,7 @@
     let n = 0;
     while (acc >= DT && n < 5) { tick(); acc -= DT; n++; }
     if (n >= 5) acc = 0;
-    Render.draw(ctx, mode === 'guest' && Net.connected ? guestView() : game, { hideHud: mode === 'demo', labels: labels() });
+    Render.draw(ctx, mode === 'online' && Net.connected ? onlineView() : game, { hideHud: mode === 'demo', labels: labels() });
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -349,13 +302,12 @@
         $('#hostCode').textContent = '····';
         $('#hostStatus').textContent = '서버에 연결 중...';
         show('p-host');
-        Net.host(netHandlers());
+        Net.host(myName(), netHandlers());
         break;
       case 'quick':
         $('#quickStatus').textContent = '대기실 확인 중...';
         show('p-quick');
-        online.ac = online.uc = 0;
-        Net.quick(netHandlers());
+        Net.quick(myName(), netHandlers());
         break;
       case 'join':
         $('#joinStatus').textContent = '';
@@ -368,11 +320,10 @@
       case 'restart': startGame(mode); break;
       case 'toMenu': toMenu(); break;
       case 'again':
-        if (mode === 'host' || mode === 'guest') {
-          online.meReady = true; b.disabled = true;
+        if (mode === 'online') {
+          b.disabled = true;
           Net.send({ t: 'rematch' });
-          if (mode === 'host' && online.themReady) restartOnline();
-          else $('#overStatus').textContent = '상대를 기다리는 중...';
+          $('#overStatus').textContent = '상대를 기다리는 중...';
         } else startGame(mode);
         break;
     }
@@ -383,8 +334,7 @@
     if (code.length !== 4) { $('#joinStatus').textContent = '코드 4자리를 입력해 주세요.'; return; }
     $('#joinStatus').textContent = '접속 중...';
     $('#btnJoin').disabled = true;
-    online.ac = online.uc = 0;
-    Net.join(code, netHandlers());
+    Net.join(code, myName(), netHandlers());
   }
   $('#btnJoin').addEventListener('click', doJoin);
   $('#joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
@@ -464,10 +414,13 @@
     Render.drawCreature(lc, 'peng', 70, 38, -1, 1, 1, o);
   })();
 
+  // 디버그용 (읽기 전용)
+  window.mallang = { get game() { return game; }, get mode() { return mode; }, get side() { return online.side; } };
+
   TG.init();
   TG.onBack(() => {
     if (mode === 'cpu') { if (!paused && game.phase !== 'over') setPause(true); else toMenu(); return; }
-    if (mode === 'host' || mode === 'guest') { if (confirm('대전을 그만두고 나갈까요?')) toMenu(); return; }
+    if (mode === 'online') { if (confirm('대전을 그만두고 나갈까요?')) toMenu(); return; }
     if (curPanel === 'p-host' || curPanel === 'p-join' || curPanel === 'p-quick') Net.close();
     show('p-menu');
   });
