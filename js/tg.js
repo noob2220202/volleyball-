@@ -2,7 +2,7 @@
 // ===== 텔레그램 미니앱 연동 =====
 // 봇의 미니앱 링크 (BotFather 에서 /newapp 으로 만든 주소). 비워두면 일반 웹 링크로 초대합니다.
 // 예: 'https://t.me/MallangVolleyBot/play'
-const TG_APP_URL = '';
+const TG_APP_URL = 'https://t.me/TIP_VOLLEYBALL_game';
 
 const TG = (() => {
   const W = window.Telegram && window.Telegram.WebApp;
