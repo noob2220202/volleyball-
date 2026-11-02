@@ -1,0 +1,176 @@
+:root {
+  --u: 1;
+  --ink: #2a1a0e;
+  --paper: #fff6dc;
+  --paper2: #ffe7a8;
+  --accent: #ff6b8a;
+  --sky: #1d3b78;
+  --ok: #4fb8ff;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: #10162e;
+  background-image: radial-gradient(#1b2550 1px, transparent 1px);
+  background-size: 8px 8px;
+  font-family: Galmuri11, 'DungGeunMo', 'Courier New', monospace;
+  color: var(--ink);
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+body { display: flex; align-items: center; justify-content: center; }
+body.touchui.portrait.ingame { align-items: flex-start; padding-top: max(12px, env(safe-area-inset-top)); }
+
+#stage {
+  position: relative; width: 480px; height: 270px;
+  box-shadow: 0 0 0 4px #000, 0 0 0 8px #3b4a8a, 0 0 0 12px #000;
+  background: #000;
+}
+#screen {
+  display: block; width: 100%; height: 100%;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px; z-index: 5;
+}
+#hud button {
+  font: inherit; font-size: 13px; width: 30px; height: 26px; padding: 0;
+  background: rgba(255, 246, 220, .75); color: var(--ink);
+  border: 2px solid var(--ink); box-shadow: 2px 2px 0 rgba(0,0,0,.35);
+  cursor: pointer;
+}
+#hud button.off { text-decoration: line-through; opacity: .6; }
+#ping {
+  position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: #fff; text-shadow: 1px 1px 0 #000; pointer-events: none; z-index: 5;
+}
+
+/* ---------- 오버레이 / 패널 ---------- */
+#overlay {
+  position: fixed; inset: 0; display: none; z-index: 30;
+  align-items: center; justify-content: center;
+  overflow: auto; padding: 8px;
+}
+#overlay.on { display: flex; }
+#overlay.dim { background: rgba(10, 16, 40, .55); }
+.panel {
+  display: none; flex-direction: column; align-items: center; gap: 6px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink), inset -3px -3px 0 var(--paper2);
+  padding: 12px 16px; min-width: 230px; text-align: center;
+  transform: scale(var(--ps, 1));
+  transform-origin: center;
+}
+.panel.on { display: flex; animation: pop .18s steps(3); }
+.panel.wide { min-width: 340px; }
+@keyframes pop { from { transform: scale(calc(var(--ps, 1) * .85)); } }
+
+h1 {
+  margin: 0; font-family: Galmuri14, Galmuri11, monospace; font-size: 30px; letter-spacing: 2px;
+  color: #ffd23f;
+  text-shadow: 2px 0 var(--ink), -2px 0 var(--ink), 0 2px var(--ink), 0 -2px var(--ink), 3px 3px 0 var(--accent), 4px 4px 0 var(--ink);
+}
+h2 { margin: 0 0 4px; font-size: 16px; color: var(--sky); }
+p { margin: 2px 0; font-size: 12px; }
+.sub { font-size: 9px; letter-spacing: 3px; color: #8a6a3a; margin-top: -2px; }
+small { font-size: 9px; opacity: .75; }
+#logoChars { width: 96px; height: 40px; image-rendering: pixelated; margin-bottom: -4px; }
+
+.menu { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 4px; }
+.row { display: flex; gap: 6px; width: 100%; justify-content: center; }
+.row > button { flex: 1; }
+.panel button {
+  font: inherit; font-size: 13px; cursor: pointer;
+  padding: 7px 12px; color: var(--ink);
+  background: #ffffff;
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform .05s;
+}
+.panel button:hover { background: #fff1a8; }
+.panel button:active { transform: translate(2px, 2px); box-shadow: none; }
+.panel button:disabled { opacity: .5; cursor: default; }
+.panel button.hot { background: var(--accent); color: #fff; font-size: 15px; padding: 9px 12px; text-shadow: 1px 1px 0 var(--ink); }
+.panel button.hot:hover { background: #ff8aa3; }
+.panel button.hot small { opacity: .95; }
+.row.small button { font-size: 11px; padding: 5px 8px; background: #eef6ff; }
+.panel button.ghost { background: transparent; box-shadow: none; border-style: dashed; font-size: 11px; padding: 4px 12px; margin-top: 4px; }
+
+.code {
+  font-family: Galmuri14, Galmuri11, monospace; font-size: 36px; letter-spacing: 10px;
+  padding: 4px 6px 4px 16px; background: var(--sky); color: #ffd23f; border: 3px solid var(--ink);
+  user-select: all; -webkit-user-select: all;
+}
+input#joinCode {
+  font-family: Galmuri14, Galmuri11, monospace; font-size: 28px; letter-spacing: 8px; text-align: center;
+  width: 170px; padding: 4px; border: 3px solid var(--ink); background: #fff; color: var(--sky);
+  text-transform: uppercase; outline: none;
+}
+input#joinCode:focus { background: #fffbe0; }
+.status { min-height: 14px; color: #c2185b; font-size: 11px; }
+
+.searching { display: flex; gap: 8px; margin: 8px 0; }
+.searching span { width: 10px; height: 10px; background: var(--accent); border: 2px solid var(--ink); animation: hop .9s steps(2) infinite; }
+.searching span:nth-child(2) { animation-delay: .15s; background: #ffd23f; }
+.searching span:nth-child(3) { animation-delay: .3s; background: var(--ok); }
+@keyframes hop { 50% { transform: translateY(-8px); } }
+
+.opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; font-size: 12px; }
+.seg { display: flex; }
+.seg button { font-size: 11px !important; padding: 4px 7px !important; box-shadow: none !important; margin-left: -2px; background: #fff; }
+.seg button.sel { background: var(--sky) !important; color: #ffd23f; }
+
+table { border-collapse: collapse; font-size: 11px; margin: 4px 0; }
+th, td { border: 2px solid var(--ink); padding: 3px 8px; }
+th { background: var(--paper2); }
+ul { text-align: left; font-size: 11px; margin: 4px 0; padding-left: 18px; line-height: 1.5; }
+
+/* ---------- 터치 컨트롤 ---------- */
+#touch { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; pointer-events: none;
+  padding: 0 max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+#touch.solo, #touch.dual { display: flex; justify-content: space-between; align-items: flex-end; }
+#touch .half { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+#touch .pad { display: flex; gap: 8px; pointer-events: auto; touch-action: none; }
+#touch button {
+  font: inherit; color: #fff; text-shadow: 1px 1px 0 #000;
+  width: 58px; height: 58px; font-size: 20px;
+  background: rgba(255, 255, 255, .18);
+  border: 3px solid rgba(0, 0, 0, .55);
+  box-shadow: inset -3px -3px 0 rgba(0,0,0,.25), inset 3px 3px 0 rgba(255,255,255,.25);
+  border-radius: 10px; touch-action: none; padding: 0;
+}
+#touch button.big { width: 74px; height: 74px; border-radius: 50%; font-size: 13px; }
+#touch button.jump { background: rgba(79, 184, 255, .45); }
+#touch button.spike { background: rgba(255, 107, 138, .5); margin-bottom: 26px; }
+#touch button.on { transform: scale(.92); background: rgba(255, 230, 80, .7); }
+#touch.dual button { width: 46px; height: 46px; font-size: 16px; }
+#touch.dual button.big { width: 56px; height: 56px; font-size: 11px; }
+#touch.dual button.spike { margin-bottom: 0; }
+#touch.dual .half.right { flex-direction: column; }
+#touch.dual .p2 button { border-color: rgba(20, 26, 60, .8); }
+#touch.dual .p1 button { border-color: rgba(90, 46, 14, .8); }
+
+/* 세로 화면 + 터치: 게임은 위, 버튼은 아래쪽 넓게 */
+body.portrait #touch.solo { bottom: 5vh; }
+body.portrait #touch.solo .pad { gap: 2vw; }
+body.portrait #touch.solo button { width: min(68px, 15vw); height: min(68px, 15vw); }
+body.portrait #touch.solo button.big { width: min(86px, 19vw); height: min(86px, 19vw); font-size: 13px; }
+body.portrait #touch.dual button { width: min(46px, 10vw); height: min(46px, 10vw); }
+body.portrait #touch.dual button.big { width: min(56px, 12vw); height: min(56px, 12vw); font-size: 10px; }
+body.portrait #touch.dual .pad { gap: 4px; }
+
+#rotate { display: none; }
+body.touchui.portrait.ingame #rotate {
+  display: block; position: fixed; left: 0; right: 0; top: calc(56.25vw + 30px);
+  text-align: center; font-size: 12px; color: #9fb0e8; pointer-events: none;
+}
+
+@media (max-height: 420px) {
+  #touch button { width: 50px; height: 50px; }
+  #touch button.big { width: 62px; height: 62px; }
+  #touch.solo .pad { opacity: .85; }
+}

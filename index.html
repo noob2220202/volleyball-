@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1d3b78">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="말랑배구 - 모찌와 펭구의 레트로 비치발리볼. PC·모바일, CPU 대전, 2인 대전, 온라인 대전 지원">
+<title>말랑배구 - MALLANG BEACH VOLLEY</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.39.3/dist/galmuri.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="screen" width="480" height="270"></canvas>
+
+  <div id="hud">
+    <button id="btnPause" title="일시정지 (Esc)">II</button>
+    <button id="btnSound" title="소리 켜기/끄기">♪</button>
+    <button id="btnFull" title="전체 화면">⛶</button>
+  </div>
+  <div id="ping"></div>
+
+  <div id="overlay">
+    <!-- 타이틀 -->
+    <section class="panel" id="p-menu">
+      <canvas id="logoChars" width="96" height="40"></canvas>
+      <h1>말랑배구</h1>
+      <p class="sub">MALLANG BEACH VOLLEY</p>
+      <div class="menu">
+        <button data-act="quick" class="hot">빠른 대전 <small>온라인 랜덤 매칭</small></button>
+        <div class="row">
+          <button data-act="host">방 만들기</button>
+          <button data-act="join">방 참가</button>
+        </div>
+        <div class="row small">
+          <button data-act="cpu">연습 <small>vs CPU</small></button>
+          <button data-act="local">한 기기 2인</button>
+        </div>
+        <div class="row small">
+          <button data-go="p-settings">설정</button>
+          <button data-go="p-howto">조작법</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 온라인: 방 만들기 -->
+    <section class="panel" id="p-host">
+      <h2>온라인 방 만들기</h2>
+      <p>친구에게 아래 코드를 알려주세요</p>
+      <div class="code" id="hostCode">····</div>
+      <div class="row">
+        <button id="btnCopy">링크 복사</button>
+        <button id="btnShare">공유하기</button>
+      </div>
+      <p class="status" id="hostStatus">서버에 연결 중...</p>
+      <button data-act="cancelNet" class="ghost">취소</button>
+    </section>
+
+    <!-- 온라인: 빠른 대전 -->
+    <section class="panel" id="p-quick">
+      <h2>빠른 대전</h2>
+      <div class="searching"><span></span><span></span><span></span></div>
+      <p class="status" id="quickStatus">대기실 확인 중...</p>
+      <p><small>친구와 하려면 '방 만들기'로 코드를 공유하세요</small></p>
+      <button data-act="cancelNet" class="ghost">취소</button>
+    </section>
+
+    <!-- 온라인: 참가 -->
+    <section class="panel" id="p-join">
+      <h2>온라인 참가하기</h2>
+      <p>친구에게 받은 방 코드 4자리</p>
+      <input id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
+      <button id="btnJoin">참가</button>
+      <p class="status" id="joinStatus"></p>
+      <button data-act="cancelNet" class="ghost">뒤로</button>
+    </section>
+
+    <!-- 설정 -->
+    <section class="panel" id="p-settings">
+      <h2>설정</h2>
+      <div class="opt"><span>목표 점수</span><div class="seg" data-set="win"><button data-v="5">5</button><button data-v="10">10</button><button data-v="15">15</button><button data-v="21">21</button></div></div>
+      <div class="opt"><span>CPU 난이도</span><div class="seg" data-set="level"><button data-v="0">쉬움</button><button data-v="1">보통</button><button data-v="2">어려움</button></div></div>
+      <div class="opt"><span>내 캐릭터 (vs CPU)</span><div class="seg" data-set="char"><button data-v="0">모찌</button><button data-v="1">펭구</button></div></div>
+      <div class="opt"><span>효과음</span><div class="seg" data-set="sfx"><button data-v="1">켜기</button><button data-v="0">끄기</button></div></div>
+      <div class="opt"><span>배경음악</span><div class="seg" data-set="bgm"><button data-v="1">켜기</button><button data-v="0">끄기</button></div></div>
+      <div class="opt"><span>터치 버튼</span><div class="seg" data-set="touch"><button data-v="2">자동</button><button data-v="1">항상</button><button data-v="0">숨김</button></div></div>
+      <button data-go="p-menu" class="ghost">뒤로</button>
+    </section>
+
+    <!-- 조작법 -->
+    <section class="panel wide" id="p-howto">
+      <h2>조작법</h2>
+      <table>
+        <tr><th></th><th>모찌 (왼쪽 / 1P)</th><th>펭구 (오른쪽 / 2P)</th></tr>
+        <tr><td>이동</td><td>A · D</td><td>← · →</td></tr>
+        <tr><td>점프</td><td>W</td><td>↑</td></tr>
+        <tr><td>스파이크</td><td>F (또는 G, Z)</td><td>Enter</td></tr>
+      </table>
+      <ul>
+        <li>혼자 하기·온라인에서는 두 키 세트 모두 + <b>Space</b>(스파이크) 사용 가능</li>
+        <li><b>점프 중 스파이크</b> → 강타! 방향키를 함께 누르면 방향이 바뀌어요<br><small>↑ 높게 · ↓ 내리꽂기 · 네트 쪽 빠르게 · 뒤쪽 짧게</small></li>
+        <li><b>땅에서 이동 + 스파이크</b> → 다이빙 리시브</li>
+        <li>공이 내 코트 바닥에 닿으면 상대 득점. 득점한 쪽이 서브!</li>
+        <li>모바일은 화면의 버튼으로 조작 (가로 화면 추천)</li>
+      </ul>
+      <button data-go="p-menu" class="ghost">뒤로</button>
+    </section>
+
+    <!-- 일시정지 -->
+    <section class="panel" id="p-pause">
+      <h2>일시정지</h2>
+      <div class="menu">
+        <button data-act="resume">계속하기</button>
+        <button data-act="restart">처음부터</button>
+        <button data-act="toMenu">메뉴로</button>
+      </div>
+    </section>
+
+    <!-- 경기 종료 -->
+    <section class="panel" id="p-over">
+      <h2 id="overTitle">게임 종료</h2>
+      <p id="overScore"></p>
+      <div class="menu">
+        <button data-act="again" id="btnAgain">다시 하기</button>
+        <button data-act="toMenu">메뉴로</button>
+      </div>
+      <p class="status" id="overStatus"></p>
+    </section>
+
+    <!-- 알림 -->
+    <section class="panel" id="p-notice">
+      <h2 id="noticeTitle">알림</h2>
+      <p id="noticeText"></p>
+      <button data-act="toMenu">확인</button>
+    </section>
+  </div>
+</div>
+
+<div id="touch"></div>
+<div id="rotate">가로로 돌리면 더 크게 즐길 수 있어요 ↻</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/font.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/net.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
