@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="app">
 <div id="stage">
   <canvas id="screen" width="480" height="270"></canvas>
 
@@ -99,7 +100,7 @@
       <ul>
         <li>온라인 대전에서 방장은 모찌(왼쪽), 참가자는 펭구(오른쪽)</li>
         <li><b>점프 중 스파이크</b> → 강타! 방향키를 함께 누르면 방향이 바뀌어요<br><small>↑ 높게 · ↓ 내리꽂기 · 네트 쪽 빠르게 · 뒤쪽 짧게</small></li>
-        <li><b>땅에서 이동 + 스파이크</b> → 다이빙 리시브</li>
+        <li><b>점프 버튼 따닥</b> → 슬라이딩 리시브 (방향키 방향, 안 누르면 공 쪽으로)</li>
         <li>공이 내 코트 바닥에 닿으면 상대 득점. 득점한 쪽이 서브!</li>
         <li>모바일은 화면의 버튼으로 조작 (가로 화면 추천)</li>
       </ul>
@@ -137,7 +138,7 @@
 </div>
 
 <div id="touch"></div>
-<div id="rotate">가로로 돌리면 더 크게 즐길 수 있어요 ↻</div>
+</div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>

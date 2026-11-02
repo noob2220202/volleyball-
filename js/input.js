@@ -9,8 +9,12 @@ const Input = (() => {
   const SOLO_EXTRA = { a: ['Space'] };
   const GAME_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space']);
 
+  // 눌린 횟수 (아주 빠른 연타도 놓치지 않기 위해)
+  const cnt = { u: 0, a: 0 };
+  const isKey = (k, code) => MAP[0][k].includes(code) || MAP[1][k].includes(code) || (SOLO_EXTRA[k] || []).includes(code);
   window.addEventListener('keydown', e => {
     if (e.target && (e.target.tagName === 'INPUT')) return;
+    if (!e.repeat) { if (isKey('u', e.code)) cnt.u++; if (isKey('a', e.code)) cnt.a++; }
     keys.add(e.code);
     if (GAME_KEYS.has(e.code) && document.body.classList.contains('ingame')) e.preventDefault();
   });
@@ -53,12 +57,13 @@ const Input = (() => {
       e.preventDefault();
       try { b.releasePointerCapture(e.pointerId); } catch (_) {}
       active.set(e.pointerId, b); recompute();
+      if (b.dataset.k in cnt) cnt[b.dataset.k]++;
       if (window.Sound) Sound.init();
     });
     window.addEventListener('pointermove', e => {
       if (!active.has(e.pointerId)) return;
       const b = btnAt(e.clientX, e.clientY), cur = active.get(e.pointerId);
-      if (b && b !== cur && b.dataset.p === cur.dataset.p) { active.set(e.pointerId, b); recompute(); }
+      if (b && b !== cur && b.dataset.p === cur.dataset.p) { active.set(e.pointerId, b); recompute(); if (b.dataset.k in cnt) cnt[b.dataset.k]++; }
     }, { passive: true });
     const end = e => { if (active.delete(e.pointerId)) recompute(); };
     window.addEventListener('pointerup', end);
@@ -69,7 +74,6 @@ const Input = (() => {
   function padHTML(p, cls) {
     return `<div class="pad move ${cls}" data-side="${p}">
         <button data-p="${p}" data-k="l" aria-label="왼쪽">◀</button>
-        <button data-p="${p}" data-k="d" aria-label="아래">▼</button>
         <button data-p="${p}" data-k="r" aria-label="오른쪽">▶</button>
       </div>
       <div class="pad act ${cls}" data-side="${p}">
@@ -96,5 +100,6 @@ const Input = (() => {
     // 혼자 조종 : 모든 키 + 터치
     solo() { return or(or(fromKeys(0, SOLO_EXTRA), fromKeys(1)), touch[0]); },
     pressed(code) { return keys.has(code); },
+    counts() { return { u: cnt.u, a: cnt.a }; },
   };
 })();

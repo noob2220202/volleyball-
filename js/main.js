@@ -46,21 +46,29 @@
     return ingame;
   }
 
+  // 화면 꽉 채우기: 남는 공간은 해변·하늘을 더 그려서 채움 (늘이지 않음)
+  // 세로로 들고 게임을 하면 화면 전체를 가로로 돌려서 표시
   function resize() {
     const ins = TG.insets();
-    document.body.style.padding = `${ins.top}px ${ins.right}px ${ins.bottom}px ${ins.left}px`;
-    document.documentElement.style.setProperty('--sb', ins.bottom + 'px');
-    const vw = window.innerWidth - ins.left - ins.right, vh = window.innerHeight - ins.top - ins.bottom;
-    const portrait = vh > vw;
-    const touch = isTouch() && mode !== 'demo';
-    let s = Math.min(vw / C.W, vh / C.H);
-    if (touch && portrait) s = vw / C.W;
-    const st = $('#stage');
-    st.style.width = Math.floor(C.W * s) + 'px';
-    st.style.height = Math.floor(C.H * s) + 'px';
-    document.body.classList.toggle('portrait', portrait);
-    document.documentElement.style.setProperty('--u', (s * C.W / 480).toFixed(3));
-    const ps = Math.max(0.62, Math.min(1.8, vw / 380, (vh - 16) / 390));
+    let w = window.innerWidth - ins.left - ins.right, h = window.innerHeight - ins.top - ins.bottom;
+    const rot = isTouch() && mode !== 'demo' && h > w;
+    const app = $('#app');
+    if (rot) {
+      Object.assign(app.style, { left: (ins.left + w) + 'px', top: ins.top + 'px', width: h + 'px', height: w + 'px', transform: 'rotate(90deg)' });
+      [w, h] = [h, w];
+    } else {
+      Object.assign(app.style, { left: ins.left + 'px', top: ins.top + 'px', width: w + 'px', height: h + 'px', transform: '' });
+    }
+    document.body.classList.toggle('rot', rot);
+    const s = Math.min(w / C.W, h / C.H);
+    const VW = Math.max(C.W, Math.round(w / s)), VH = Math.max(C.H, Math.round(h / s));
+    if (cvs.width !== VW || cvs.height !== VH) {
+      cvs.width = VW; cvs.height = VH;
+      ctx.imageSmoothingEnabled = false;
+      Render.setView(VW, VH);
+    }
+    document.documentElement.style.setProperty('--btn', Math.round(Math.max(50, Math.min(92, h * 0.19, w * 0.11))) + 'px');
+    const ps = Math.max(0.62, Math.min(1.8, w / 380, (h - 16) / 390));
     document.documentElement.style.setProperty('--ps', ps.toFixed(3));
   }
   window.addEventListener('resize', resize);
@@ -79,6 +87,8 @@
     }
     if (m !== 'guest') game = newGame(S.win);
     online.seq = online.ack = online.rseq = 0; online.hist = [];
+    online.rac = online.ruc = 0;
+    localEdge = makeEdge(); remoteEdge = makeEdge();
     TG.confirmClose(m === 'host' || m === 'guest');
     online.meReady = online.themReady = false;
     show(null);
@@ -225,18 +235,29 @@
     Net.send({ t: 'start' });
   }
 
-  function hostRemoteInput() {
-    const i = Object.assign({}, online.rin);
-    if (online.rac !== online.cac) { i.a = 1; online.cac = online.rac; }
-    if (online.ruc !== online.cuc) { i.u = 1; online.cuc = online.ruc; }
-    return i;
+  // 버튼 입력을 한 번도 빠짐없이 처리 (따닥 연타도 두 번으로 인식되게 눌림/뗌을 번갈아 적용)
+  function makeEdge() {
+    const st = { c: { u: null, a: null }, last: { u: 0, a: 0 } };
+    return (raw, counts) => {
+      const i = Object.assign({}, raw);
+      for (const k of ['u', 'a']) {
+        if (st.c[k] === null || counts[k] - st.c[k] > 3 || counts[k] < st.c[k]) st.c[k] = counts[k] - (counts[k] > st.c[k] && st.c[k] !== null ? 1 : 0);
+        if (counts[k] !== st.c[k]) {
+          if (st.last[k]) i[k] = 0; else { i[k] = 1; st.c[k]++; }
+        }
+        st.last[k] = i[k];
+      }
+      return i;
+    };
   }
+  let localEdge = makeEdge(), remoteEdge = makeEdge();
+  function localInput() { return localEdge(Input.solo(), Input.counts()); }
+  function hostRemoteInput() { return remoteEdge(online.rin, { u: online.ruc, a: online.rac }); }
 
   function guestSendInput() {
-    const i = Input.solo();
-    if (i.a && !online.prev.a) online.ac++;
-    if (i.u && !online.prev.u) online.uc++;
-    online.prev = { a: i.a, u: i.u };
+    const i = localInput();
+    const c = Input.counts();
+    online.ac = c.a; online.uc = c.u;
     const b = i.l | (i.r << 1) | (i.u << 2) | (i.d << 3) | (i.a << 4);
     online.seq++;
     online.hist.push({ s: online.seq, i });
@@ -248,7 +269,7 @@
   function guestView() {
     if (game.phase === 'over') return game;
     const p = Object.assign({}, game.players[1]);
-    const stub = { phase: game.phase, ev: [], frame: game.frame, t: game.t };
+    const stub = { phase: game.phase, ev: [], frame: game.frame, t: game.t, ball: game.ball };
     const h = online.hist;
     let start = h.findIndex(e => e.s > online.ack);
     if (start < 0) return game;
@@ -270,10 +291,10 @@
       if (mode === 'demo') inputs = [brains[0].input(game), brains[1].input(game)];
       else if (mode === 'cpu') {
         inputs = [];
-        inputs[humanSide] = Input.solo();
+        inputs[humanSide] = localInput();
         inputs[1 - humanSide] = brains[1 - humanSide].input(game);
       }
-      else if (mode === 'host') inputs = [Input.solo(), hostRemoteInput()];
+      else if (mode === 'host') inputs = [localInput(), hostRemoteInput()];
       stepGame(game, inputs);
       handleEvents(game.ev, mode !== 'demo');
       if (mode === 'host') { const g = packGame(game); g.q = online.rseq; Net.send({ t: 's', g }); }

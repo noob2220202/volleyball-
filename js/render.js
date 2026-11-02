@@ -14,6 +14,7 @@ const Render = (() => {
   const particles = [];
   const trail = [];
   let shake = 0, flash = 0, banner = null;
+  let VW = C.W, VH = C.H, OX = 0, OY = 0; // 화면 크기와 코트 위치(코트는 가운데 아래)
 
   function rng(seed) {
     return () => {
@@ -41,17 +42,24 @@ const Render = (() => {
   // ---------- 배경 ----------
   function buildBG() {
     const c = document.createElement('canvas');
-    c.width = C.W; c.height = C.H;
+    c.width = VW; c.height = VH;
     const x = c.getContext('2d');
+    x.translate(OX, OY);
+    const L = -OX, FW = VW;
     const R = rng(7);
+    // 위쪽으로 넓어진 하늘
+    if (OY > 0) {
+      const up = ['#4fb8ff', '#46b0fc', '#3ea8f8', '#36a0f3', '#2f98ee'];
+      for (let i = 0; i * 26 < OY + 26; i++) { x.fillStyle = up[Math.min(i, up.length - 1)]; x.fillRect(L, -26 * (i + 1), FW, 26); }
+    }
     const sky = ['#4fb8ff', '#62c2ff', '#78ccff', '#8fd6ff', '#a8e0ff', '#c2eaff'];
     const bh = 26;
     for (let i = 0; i < sky.length; i++) {
-      x.fillStyle = sky[i]; x.fillRect(0, i * bh, C.W, bh);
+      x.fillStyle = sky[i]; x.fillRect(L, i * bh, FW, bh);
       if (i < sky.length - 1) {
         x.fillStyle = sky[i + 1];
         for (let yy = 0; yy < 4; yy++)
-          for (let xx = (yy % 2); xx < C.W; xx += (yy < 2 ? 4 : 2)) x.fillRect(xx, i * bh + bh - 4 + yy, 1, 1);
+          for (let xx = L + (yy % 2); xx < L + FW; xx += (yy < 2 ? 4 : 2)) x.fillRect(xx, i * bh + bh - 4 + yy, 1, 1);
       }
     }
     // 해
@@ -66,13 +74,15 @@ const Render = (() => {
       x.fillStyle = '#d6efff'; x.fillRect(cx - 18 * s, cy + 6 * s, 42 * s, 2);
     };
     cloud(90, 40, 1); cloud(300, 70, 0.8); cloud(190, 22, 0.6); cloud(470, 95, 0.7);
+    if (OX > 40) { cloud(-OX * 0.5, 75, 0.8); cloud(C.W + OX * 0.6, 35, 0.9); }
+    for (let yy = -60; yy > -OY; yy -= 90) { cloud(60 + R() * 360, yy, 0.6 + R() * 0.5); }
     // 바다
     const sea = ['#2b86d9', '#2f93e3', '#3aa1ea', '#48b0f0'];
-    for (let i = 0; i < 4; i++) { x.fillStyle = sea[i]; x.fillRect(0, 150 + i * 10, C.W, 10); }
-    x.fillStyle = '#1f6fbf'; x.fillRect(0, 150, C.W, 2);
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 4; i++) { x.fillStyle = sea[i]; x.fillRect(L, 150 + i * 10, FW, 10); }
+    x.fillStyle = '#1f6fbf'; x.fillRect(L, 150, FW, 2);
+    for (let i = 0; i < 70 * FW / C.W; i++) {
       x.fillStyle = R() < 0.5 ? '#bfe6ff' : '#e8f7ff';
-      x.fillRect(Math.floor(R() * C.W), 154 + Math.floor(R() * 34), 2 + Math.floor(R() * 5), 1);
+      x.fillRect(L + Math.floor(R() * FW), 154 + Math.floor(R() * 34), 2 + Math.floor(R() * 5), 1);
     }
     // 작은 섬
     oval(x, 70, 152, 26, 5, '#3d9a5a');
@@ -84,15 +94,15 @@ const Render = (() => {
     x.fillStyle = '#ff6b6b'; x.fillRect(347, 156, 14, 3);
     // 파도
     x.fillStyle = '#ffffff';
-    for (let xx = 0; xx < C.W; xx += 12) { x.fillRect(xx, 189, 7, 1); x.fillRect(xx + 6, 191, 6, 1); }
+    for (let xx = Math.floor(L / 12) * 12; xx < L + FW; xx += 12) { x.fillRect(xx, 189, 7, 1); x.fillRect(xx + 6, 191, 6, 1); }
     // 모래사장
     const sand = ['#e9c47a', '#f0cf88', '#f5d895', '#f8dfa2'];
-    x.fillStyle = '#d9ad5f'; x.fillRect(0, 192, C.W, 3);
-    for (let i = 0; i < 4; i++) { x.fillStyle = sand[i]; x.fillRect(0, 195 + i * 6, C.W, i === 3 ? 80 : 6); }
-    for (let i = 0; i < 380; i++) {
+    x.fillStyle = '#d9ad5f'; x.fillRect(L, 192, FW, 3);
+    for (let i = 0; i < 4; i++) { x.fillStyle = sand[i]; x.fillRect(L, 195 + i * 6, FW, i === 3 ? 80 : 6); }
+    for (let i = 0; i < 380 * FW / C.W; i++) {
       const yy = 196 + Math.floor(R() * 74);
       x.fillStyle = R() < 0.6 ? '#d9b066' : '#fff2c8';
-      x.fillRect(Math.floor(R() * C.W), yy, 1, 1);
+      x.fillRect(L + Math.floor(R() * FW), yy, 1, 1);
     }
     // 코트 라인
     x.fillStyle = '#ffffff';
@@ -103,6 +113,17 @@ const Render = (() => {
     x.fillStyle = '#ff9eb0'; x.fillRect(30, 252, 5, 2); x.fillRect(31, 251, 3, 1);
     x.fillStyle = '#ff7b4a';
     [[450, 256], [449, 255], [451, 255], [448, 256], [452, 256], [450, 254], [449, 257], [451, 257]].forEach(([a, b]) => x.fillRect(a, b, 1, 1));
+    // 코트 바깥은 살짝 어둡게 + 코트 끝(벽) 깃발
+    if (OX > 0) {
+      x.fillStyle = 'rgba(80, 40, 0, 0.10)';
+      x.fillRect(L, 192, OX, 80); x.fillRect(C.W, 192, OX, 80);
+    }
+    const flag = (fx, dir) => {
+      x.fillStyle = '#5a3412'; x.fillRect(fx - 1, C.GROUND - 40, 3, 42);
+      x.fillStyle = '#7a4a22'; x.fillRect(fx, C.GROUND - 40, 1, 42);
+      for (let i = 0; i < 9; i++) { x.fillStyle = i % 3 === 0 ? '#ffd23f' : '#ff5a5a'; x.fillRect(dir > 0 ? fx + 2 : fx - 1 - (9 - Math.abs(4 - i) - 4), C.GROUND - 40 + i, 9 - Math.abs(4 - i) - 4 + 1, 1); }
+    };
+    flag(1, 1); flag(C.W - 2, -1);
     return c;
   }
 
@@ -133,6 +154,10 @@ const Render = (() => {
   }
 
   function init() { bg = buildBG(); buildBall(); }
+  function setView(w, h) {
+    VW = w; VH = h; OX = Math.floor((VW - C.W) / 2); OY = VH - C.H;
+    bg = buildBG();
+  }
 
   // ---------- 캐릭터 ----------
   function drawCreature(ctx, kind, x, yb, f, sx, sy, o) {
@@ -277,11 +302,11 @@ const Render = (() => {
     ctx.globalAlpha = 1;
     drawShadow(ctx, b.x, Math.min(b.y + R, C.GROUND), 9);
     const fi = ((Math.floor(b.rot / (Math.PI * 2) * 24) % 24) + 24) % 24;
-    if (b.y < -R) {
+    if (b.y < -OY - R) {
       // 화면 위 표시
       const x = Math.round(Math.max(6, Math.min(C.W - 6, b.x)));
       ctx.fillStyle = '#ff5a5a';
-      for (let i = 0; i < 5; i++) ctx.fillRect(x - i, 2 + i, i * 2 + 1, 1);
+      for (let i = 0; i < 5; i++) ctx.fillRect(x - i, -OY + 2 + i, i * 2 + 1, 1);
       return;
     }
     ctx.drawImage(ballFrames[fi], Math.round(b.x) - R - 1, Math.round(b.y) - R - 1);
@@ -349,6 +374,7 @@ const Render = (() => {
     ctx.save();
     if (shake > 0) ctx.translate(Math.round((Math.random() - 0.5) * shake), Math.round((Math.random() - 0.5) * shake));
     ctx.drawImage(bg, 0, 0);
+    ctx.translate(OX, OY);
     drawNet(ctx);
     for (const p of g.players) drawPlayer(ctx, p, g.frame);
     drawBall(ctx, g.ball);
@@ -357,9 +383,10 @@ const Render = (() => {
       else { ctx.fillStyle = q.col; ctx.fillRect(Math.round(q.x), Math.round(q.y), q.s, q.s); }
     }
     ctx.restore();
-    if (flash > 0) { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(0, 0, C.W, C.H); }
+    if (flash > 0) { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(0, 0, VW, VH); }
 
     if (opts.hideHud) return;
+    ctx.save(); ctx.translate(OX, OY);
     // 점수판
     PixelFont.draw(ctx, g.score[0], 16, 10, 6, '#ffffff', 'left', '#1d3b78');
     PixelFont.draw(ctx, g.score[1], C.W - 16, 10, 6, '#ffffff', 'right', '#1d3b78');
@@ -387,9 +414,10 @@ const Render = (() => {
         PixelFont.draw(ctx, CHAR_NAMES[g.winner] + ' WIN!', C.W / 2, 96, 3, '#ffffff', 'center', '#d6336c');
       }
     }
+    ctx.restore();
   }
 
   function clearFx() { particles.length = 0; trail.length = 0; banner = null; shake = 0; flash = 0; }
 
-  return { init, draw, fx, update, clearFx, drawCreature };
+  return { init, setView, draw, fx, update, clearFx, drawCreature };
 })();

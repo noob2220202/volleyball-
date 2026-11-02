@@ -13,7 +13,7 @@ const C = {
 // 플레이어 상태(st): 0 지상, 1 점프, 2 다이빙, 3 다이빙 후 일어나기
 function makePlayer(side) {
   return { side, x: C.START_X[side], y: C.GROUND, vx: 0, vy: 0, st: 0, t: 0,
-    sw: 0, dd: 1, land: 0, emo: 0, pu: 0, pa: 0 };
+    sw: 0, dd: 1, land: 0, emo: 0, pu: 0, pa: 0, jf: 99 };
 }
 
 function newGame(winScore) {
@@ -89,14 +89,21 @@ function updatePlayer(g, p, inp) {
       p.st = 2; p.t = 24; p.dd = dir; p.vx = dir * 5.6; p.vy = -2.6;
       emit(g, 'dive', p.x, p.y);
     } else if (inp.u) {
-      p.st = 1; p.vy = -C.P_JUMP; p.vx = dir * C.P_SPEED;
+      p.st = 1; p.vy = -C.P_JUMP; p.vx = dir * C.P_SPEED; p.jf = 0;
       emit(g, 'jump', p.x, p.y);
     } else {
       p.vx = dir * C.P_SPEED;
     }
   } else if (p.st === 1) {
     p.vx = dir * C.P_SPEED;
-    if (actPressed) { p.sw = 10; emit(g, 'swing', p.x, p.y - 30); }
+    p.jf++;
+    if (upPressed && p.jf <= 16) {
+      // 점프 버튼 따닥 → 슬라이딩 (방향키 방향, 없으면 공 쪽으로)
+      const b = g.ball;
+      const dd = dir || (b && b.x < p.x ? -1 : 1);
+      p.st = 2; p.t = 26; p.dd = dd; p.vx = dd * 6; p.vy = Math.max(p.vy, 1.5); p.sw = 0;
+      emit(g, 'dive', p.x, p.y);
+    } else if (actPressed) { p.sw = 10; emit(g, 'swing', p.x, p.y - 30); }
   } else if (p.st === 2) {
     p.t--;
     if (p.y >= C.GROUND) p.vx *= 0.93;
@@ -216,7 +223,7 @@ const PHASES = ['ready', 'play', 'point', 'over'];
 const r1 = v => Math.round(v * 10) / 10;
 function packGame(g) {
   return {
-    p: g.players.map(p => [r1(p.x), r1(p.y), r1(p.vx), r1(p.vy), p.st, p.t, p.sw, p.dd, p.land, p.emo]),
+    p: g.players.map(p => [r1(p.x), r1(p.y), r1(p.vx), r1(p.vy), p.st, p.t, p.sw, p.dd, p.land, p.emo, p.jf]),
     b: [r1(g.ball.x), r1(g.ball.y), r1(g.ball.vx), r1(g.ball.vy), Math.round(g.ball.rot * 100) / 100, g.ball.pw],
     s: g.score, h: PHASES.indexOf(g.phase), t: g.t, f: g.frame, v: g.server, w: g.winner, W: g.win, e: g.ev,
   };
@@ -225,7 +232,7 @@ function unpackGame(o, g) {
   g = g || newGame(o.W);
   o.p.forEach((a, i) => {
     const p = g.players[i];
-    [p.x, p.y, p.vx, p.vy, p.st, p.t, p.sw, p.dd, p.land, p.emo] = a;
+    [p.x, p.y, p.vx, p.vy, p.st, p.t, p.sw, p.dd, p.land, p.emo, p.jf] = a;
   });
   const b = g.ball;
   [b.x, b.y, b.vx, b.vy, b.rot, b.pw] = o.b;
