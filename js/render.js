@@ -400,8 +400,13 @@ const Render = (() => {
     if (g.phase === 'ready' && g.t > 10 && Math.floor(g.t / 8) % 2 === 0) {
       PixelFont.draw(ctx, 'READY?', C.W / 2, 70, 4, '#ffe14d', 'center', '#7a3a10');
     }
-    if (g.phase === 'ready' && (g.score[0] === g.win - 1 || g.score[1] === g.win - 1)) {
-      PixelFont.draw(ctx, 'MATCH POINT', C.W / 2, 96, 2, '#ff5a5a', 'center', '#ffffff');
+    if (g.phase === 'ready') {
+      const [a, b] = g.score, top = Math.max(a, b);
+      if (a === b && a >= g.win - 1) {
+        PixelFont.draw(ctx, 'DEUCE', C.W / 2, 96, 3, '#ff5a5a', 'center', '#ffffff');
+      } else if (top >= g.win - 1 && Math.abs(a - b) >= 1) {
+        PixelFont.draw(ctx, 'MATCH POINT', C.W / 2, 96, 2, '#ff5a5a', 'center', '#ffffff');
+      }
     }
     if (banner && g.phase !== 'over') {
       const bx = banner.side === 0 ? C.W / 4 : C.W * 3 / 4;

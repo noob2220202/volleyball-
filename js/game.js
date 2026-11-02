@@ -16,9 +16,16 @@ function makePlayer(side) {
     sw: 0, dd: 1, land: 0, emo: 0, pu: 0, pa: 0, jf: 99 };
 }
 
+// 11점 내기, 듀스 있음 (10:10 이후엔 2점 차가 나야 승리)
+const WIN_SCORE = 11;
+function isGameOver(g) {
+  const [a, b] = g.score;
+  return Math.max(a, b) >= g.win && Math.abs(a - b) >= 2;
+}
+
 function newGame(winScore) {
   const g = {
-    phase: 'ready', t: 100, score: [0, 0], server: 0, win: winScore || 15,
+    phase: 'ready', t: 100, score: [0, 0], server: 0, win: winScore || WIN_SCORE,
     players: [makePlayer(0), makePlayer(1)],
     ball: { x: 0, y: 0, vx: 0, vy: 0, rot: 0, pw: 0, cd: 0, cs: -1 },
     ev: [], frame: 0, winner: -1, hits: 0,
@@ -56,7 +63,7 @@ function stepGame(g, inputs) {
   if (g.phase === 'point') {
     g.t--;
     if (g.t <= 0) {
-      if (g.score[0] >= g.win || g.score[1] >= g.win) {
+      if (isGameOver(g)) {
         g.phase = 'over'; g.t = 0;
         g.winner = g.score[0] > g.score[1] ? 0 : 1;
         g.players[g.winner].emo = 1; g.players[1 - g.winner].emo = 2;

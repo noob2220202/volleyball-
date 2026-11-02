@@ -8,7 +8,7 @@
   Render.init();
 
   // ---------- 설정 ----------
-  const DEF = { win: 15, level: 1, char: 0, sfx: 1, bgm: 1, touch: 2 };
+  const DEF = { level: 1, char: 0, sfx: 1, bgm: 1, touch: 2 };
   let S = Object.assign({}, DEF);
   try { Object.assign(S, JSON.parse(localStorage.getItem('mallang-settings') || '{}')); } catch (_) {}
   const save = () => { try { localStorage.setItem('mallang-settings', JSON.stringify(S)); } catch (_) {} };
@@ -33,7 +33,13 @@
   }
   function notice(title, text) { $('#noticeTitle').textContent = title; $('#noticeText').textContent = text; show('p-notice'); }
 
-  const isTouch = () => S.touch === 1 || (S.touch === 2 && (matchMedia('(any-pointer: coarse)').matches || 'ontouchstart' in window));
+  // 화면 버튼은 휴대폰·태블릿에서만. PC(텔레그램 데스크톱 포함)는 키보드로만 조작
+  const isMobileDevice = () => {
+    const tp = TG.platform();
+    if (tp) return tp === 'android' || tp === 'android_x' || tp === 'ios';
+    return matchMedia('(hover: none) and (pointer: coarse)').matches;
+  };
+  const isTouch = () => S.touch === 1 || (S.touch === 2 && isMobileDevice());
 
   function layoutTouch() {
     const ingame = mode !== 'demo' && !paused && !$('#overlay').classList.contains('on');
@@ -85,7 +91,7 @@
       brains = [null, null];
       brains[1 - humanSide] = new CpuBrain(1 - humanSide, S.level);
     }
-    if (m !== 'guest') game = newGame(S.win);
+    if (m !== 'guest') game = newGame(WIN_SCORE);
     online.seq = online.ack = online.rseq = 0; online.hist = [];
     online.rac = online.ruc = 0;
     localEdge = makeEdge(); remoteEdge = makeEdge();
@@ -229,7 +235,7 @@
   }
 
   function restartOnline() {
-    game = newGame(S.win);
+    game = newGame(WIN_SCORE);
     overShown = false; online.meReady = online.themReady = false;
     Render.clearFx(); show(null); layoutTouch();
     Net.send({ t: 'start' });

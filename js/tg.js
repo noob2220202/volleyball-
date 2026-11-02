@@ -28,6 +28,8 @@ const TG = (() => {
       const u = inTg && W.initDataUnsafe && W.initDataUnsafe.user;
       return u ? (u.first_name || u.username || '') : '';
     },
+    // 'android' | 'ios' | 'tdesktop' | 'macos' | 'web' ... (텔레그램 밖이면 '')
+    platform() { return inTg ? String(W.platform || '') : ''; },
     startParam() { return inTg && W.initDataUnsafe ? (W.initDataUnsafe.start_param || '') : ''; },
     haptic(kind) {
       if (!ver('6.1')) return;
