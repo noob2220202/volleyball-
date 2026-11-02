@@ -22,7 +22,11 @@ pm2 start ecosystem.config.js   # http://서버IP:8080
 pm2 save && pm2 startup         # 재부팅해도 자동 실행
 ```
 
-텔레그램 미니앱은 HTTPS가 필요합니다. 도메인을 연결한 뒤 nginx 등으로 8080 포트를 HTTPS로 프록시하세요.
+텔레그램 미니앱은 HTTPS가 필요합니다.
+
+**Caddy로 HTTPS 자동 적용 (추천):** `Caddyfile.example`을 참고하세요. 도메인만 바꿔서 `/etc/caddy/Caddyfile`에 넣으면 인증서까지 자동으로 붙습니다.
+- Caddy가 파일을 직접 서비스하면 pm2 없이도 됩니다.
+- pm2로 띄웠다면 `reverse_proxy 127.0.0.1:8080`으로 연결하면 됩니다.
 
 **GitHub Pages 배포:** 저장소 Settings → Pages에서 배포 브랜치를 고르면 바로 접속 주소가 생깁니다.
 

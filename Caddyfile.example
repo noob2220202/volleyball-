@@ -1,0 +1,16 @@
+# Caddy 설정 예시
+# 1) 아래 game.example.com 을 내 도메인으로 바꾸고
+# 2) /etc/caddy/Caddyfile 에 넣은 뒤: sudo systemctl reload caddy
+# HTTPS 인증서는 Caddy 가 자동으로 받습니다.
+
+# 방법 A (추천): Caddy 가 파일을 직접 서비스 — pm2 필요 없음
+game.example.com {
+	root * /home/ubuntu/volleyball-
+	file_server
+	encode gzip
+}
+
+# 방법 B: pm2(8080 포트)로 띄운 걸 Caddy 가 HTTPS 로 연결
+# game.example.com {
+# 	reverse_proxy 127.0.0.1:8080
+# }
